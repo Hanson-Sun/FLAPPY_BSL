@@ -19,6 +19,8 @@
 
 (define FLAPPY-IMG (get-sprite "yellowbird-midflap"))
 (define FLAPPY-LEN (image-height FLAPPY-IMG))
+(define FLAPPY-X-POS 50)
+(define MAX-Y-SPEED 10)
 (define MTS (get-sprite "yellowbird-midflap"))
 (define WIDTH (image-width MTS))
 (define HEIGHT(image-height MTS))
@@ -118,10 +120,17 @@
 
 (define (main gs)
   (big-bang gs
-    (on-tick tock)
     (to-draw render)
+    (on-tick tock)
     (on-mouse handle-mouse)
     (on-key handle-key)))
+
+
+(@htdf render)
+(@signature GameState -> Image)
+;; render GameState on MTS
+;; !!!
+(define (render gs) MTS)
 
 
 (@htdf tock)
@@ -141,7 +150,7 @@
         (gs-state gs))))
 
 (define (tock gs)
-  (cond [(false? gs-state) gs]
+  (cond [(false? (gs-state gs)) gs]
         [(touch-pipe? (gs-flappy gs) (gs-lop gs))
          (make-gs (tock-flappy (gs-flappy gs))
                   (gs-lop gs)
@@ -172,21 +181,108 @@
 ;; !!!
 (define (touch-pipe? f lop) false)
 
-(@htdf render)
-(@signature GameState -> Image)
-;; render GameState on MTS
-;; !!!
-(define (render gs) MTS)
-
 (@htdf handle-mouse)
 (@signature GameState Integer Integer MouseEvent -> GameState)
-;; accelerate flappy upwards on "mousedown"
-;; !!!
-(define (handle-mouse gs x y me) gs)
+;; accelerate Flappy upwards on "button-down"
+
+;; !!! make this cleaner
+(define LOP10 (cons (make-pipe 200 300) (cons (make-pipe 300 400) empty)))
+(define FP10 (make-flappy 300 -4 0))
+(define FP11 (make-flappy 200 -10 ANGLE-DOWN))
+
+(check-expect (handle-mouse (make-gs FP10 LOP10  500 true) 0 0 "button-down")
+              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP)
+                       LOP10
+                       500
+                       true))
+
+(check-expect (handle-mouse (make-gs FP11 LOP10  500 true) WIDTH HEIGHT "drag")
+              (make-gs FP11
+                       LOP10
+                       500
+                       true))
+
+;(define (handle-mouse gs x y me) gs)
+
+(@template-origin MouseEvent)
+
+(@template
+ (define (handle-mouse gs x y me)
+   (cond [(mouse=? "button-down" me)
+          (... (fn-for-gs gs))]
+         [else
+          (... (fn-for-gs gs))])))
+
+(define (handle-mouse gs x y me)
+  (cond [(mouse=? "button-down" me)
+         (do-flap gs)]     
+        [else gs]))
+
 
 (@htdf handle-key)
 (@signature GameState KeyEvent -> GameState)
-;; accelerate flappy upwards on " " and "uparrow"
-;; !!!
-(define (handle-key gs ke) gs)
+;; accelerate Flappy upwards on " " and "up"
+
+;; !!! make this cleaner
+(check-expect (handle-key (make-gs FP10 LOP10  500 true) "up")
+              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP)
+                       LOP10
+                       500
+                       true))
+
+(check-expect (handle-key (make-gs FP11 LOP10  500 true) " ")
+              (make-gs (make-flappy 200 MAX-Y-SPEED ANGLE-UP)
+                       LOP10
+                       500
+                       true))
+
+(check-expect (handle-key (make-gs FP11 LOP10  500 true) "a")
+              (make-gs FP11
+                       LOP10
+                       500
+                       true))
+
+;(define (handle-key gs ke) gs)
+
+(@template-origin KeyEvent)
+
+(@template
+ (define (handle-key gs ke)
+   (cond [(key=? " " ke)
+          (... (fn-for-gs gs))]
+         [else
+          (... (fn-for-gs gs))])))
+
+(define (handle-key gs ke)
+  (cond [(key=? " " ke)
+         (do-flap gs)]
+        [(key=? "up" ke)
+         (do-flap gs)]
+        [else gs]))
+
+
+(@htdf do-flap)
+(@signature GameState -> GameState)
+;; accelerate Flappy upwards
+
+;; !!! check expects go here
+;(define (do-flap gs) gs)
+
+(@template-origin GameState
+                  Flappy)
+
+(@template
+ (define (do-flap gs)
+   (... (flappy-y (gs-flappy gs))
+        (flappy-dy (gs-flappy gs))
+        (flappy-r (gs-flappy gs))
+        (gs-lop gs)
+        (gs-points gs)
+        (gs-state gs))))
+
+(define (do-flap gs)
+  (make-gs (make-flappy (flappy-y (gs-flappy gs)) MAX-Y-SPEED ANGLE-UP)
+           (gs-lop gs)
+           (gs-points gs)
+           (gs-state gs)))
 
