@@ -41,8 +41,6 @@
 ;; interp. y  - the vertical position of Flappy in px
 ;;         dy - the vertical velocity of Flappy in px/tick
 ;;         r  - the rotation of Flappy in degrees
-;; CONSTRAINT: dy - in [(- MAX-Y-SPEED), MAX-Y-SPEED]
-;;             r  - in [MIN-ANGLE, MAX-ANGLE]
 
 (@dd-template-rules compound) ;3 fields
 
@@ -183,9 +181,7 @@
 
 (define (tock-flappy f)
   (make-flappy (+ (flappy-y f) (flappy-dy f))
-               (cond [(> (+ (flappy-dy f) GRAVITY) MAX-Y-SPEED)
-                      MAX-Y-SPEED]
-                     [else (+ (flappy-dy f) GRAVITY)])
+               (+ (flappy-dy f) GRAVITY)
                (cond [(> (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED)) MAX-ANGLE)
                       MAX-ANGLE]
                      [(< (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED)) MIN-ANGLE)
