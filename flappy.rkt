@@ -41,7 +41,7 @@
 ;; interp. y  - the vertical position of Flappy in px
 ;;         dy - the vertical velocity of Flappy in px/tick
 ;;         r  - the rotation of Flappy in degrees
-;; CONSTRAINT: r in (-90, 90)
+;; CONSTRAINT: r in [-45, 45]
 
 (@dd-template-rules compound) ;3 fields
 
@@ -72,6 +72,7 @@
 (@dd-template-rules one-of
                     atomic-distinct
                     compound
+                    ref
                     self-ref)
 
 (define (fn-for-lob lob)
@@ -92,6 +93,7 @@
 (define START (make-gs (make-flappy 0 0 0) empty 0 true))
 
 (@dd-template-rules compound
+                    ref
                     ref)
 
 (define (fn-for-gs gs)
@@ -181,6 +183,7 @@
 ;; !!!
 (define (touch-pipe? f lop) false)
 
+
 (@htdf handle-mouse)
 (@signature GameState Integer Integer MouseEvent -> GameState)
 ;; accelerate Flappy upwards on "button-down"
@@ -191,16 +194,9 @@
 (define FP11 (make-flappy 200 -10 ANGLE-DOWN))
 
 (check-expect (handle-mouse (make-gs FP10 LOP10  500 true) 0 0 "button-down")
-              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP)
-                       LOP10
-                       500
-                       true))
-
+              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
 (check-expect (handle-mouse (make-gs FP11 LOP10  500 true) WIDTH HEIGHT "drag")
-              (make-gs FP11
-                       LOP10
-                       500
-                       true))
+              (make-gs FP11 LOP10 500 true))
 
 ;(define (handle-mouse gs x y me) gs)
 
@@ -215,7 +211,7 @@
 
 (define (handle-mouse gs x y me)
   (cond [(mouse=? "button-down" me)
-         (do-flap gs)]     
+         (start-flap gs)]     
         [else gs]))
 
 
@@ -225,22 +221,11 @@
 
 ;; !!! make this cleaner
 (check-expect (handle-key (make-gs FP10 LOP10  500 true) "up")
-              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP)
-                       LOP10
-                       500
-                       true))
-
+              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
 (check-expect (handle-key (make-gs FP11 LOP10  500 true) " ")
-              (make-gs (make-flappy 200 MAX-Y-SPEED ANGLE-UP)
-                       LOP10
-                       500
-                       true))
-
+              (make-gs (make-flappy 200 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
 (check-expect (handle-key (make-gs FP11 LOP10  500 true) "a")
-              (make-gs FP11
-                       LOP10
-                       500
-                       true))
+              (make-gs FP11 LOP10 500 true))
 
 ;(define (handle-key gs ke) gs)
 
@@ -255,34 +240,47 @@
 
 (define (handle-key gs ke)
   (cond [(key=? " " ke)
-         (do-flap gs)]
+         (start-flap gs)]
         [(key=? "up" ke)
-         (do-flap gs)]
+         (start-flap gs)]
         [else gs]))
 
 
-(@htdf do-flap)
+(@htdf start-flap)
 (@signature GameState -> GameState)
-;; accelerate Flappy upwards
+;; update GameState so that Flappy flaps
 
 ;; !!! check expects go here
-;(define (do-flap gs) gs)
+;(define (start-flap gs) gs)
 
-(@template-origin GameState
-                  Flappy)
+(@template-origin GameState)
 
 (@template
- (define (do-flap gs)
-   (... (flappy-y (gs-flappy gs))
-        (flappy-dy (gs-flappy gs))
-        (flappy-r (gs-flappy gs))
+ (define (start-flap gs)
+   (... (fn-for-flappy (gs-flappy gs))
         (gs-lop gs)
         (gs-points gs)
         (gs-state gs))))
 
-(define (do-flap gs)
-  (make-gs (make-flappy (flappy-y (gs-flappy gs)) MAX-Y-SPEED ANGLE-UP)
-           (gs-lop gs)
-           (gs-points gs)
-           (gs-state gs)))
+(define (start-flap gs)
+  (make-gs (flap (gs-flappy gs)) (gs-lop gs) (gs-points gs) (gs-state gs)))
+
+
+(@htdf flap)
+(@signature Flappy -> Flappy)
+;; accelerate Flappy upwards
+
+;; !!! check expects go here
+;(define (flap f) f)
+
+(@template-origin Flappy)
+
+(@template
+ (define (flap f)
+   (... (flappy-y f)
+        (flappy-dy f)
+        (flappy-r f))))
+
+(define (flap f)
+  (make-flappy (flappy-y f) MAX-Y-SPEED ANGLE-UP))
 
