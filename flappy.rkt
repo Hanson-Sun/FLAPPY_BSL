@@ -28,9 +28,14 @@
 (define PIPE-WIDTH (/ WIDTH 5))
 (define PIPE-V-GAP (/ HEIGHT 10))
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
+(define PIPE-COLOR "darkgreen") ;!!! change color lol?
 (define GRAVITY 2)
 (define MAX-ANGLE 30)
 (define MIN-ANGLE -90)
+(define POINTS-X (/ width 2)) ; x position of where points show up
+(define POINTS-Y (/ height 5)) ; y position of where points show up
+(define TEXT-COLOR "white")
+(define FONT-SIZE 20)
 
 
 ;; DATA DEFINITIONS ============================================================
@@ -53,7 +58,7 @@
 (@htdd Pipe)
 (define-struct pipe (x y))
 ;; Pipe is (make-pipe Number Number)
-;; interp. x, y - the position of the top left corner of the pipes in px
+;; interp. x, y - the position of the top left corner of the bottom pipe in px
 
 (@dd-template-rules compound) ;2 fields
 
@@ -129,10 +134,118 @@
 
 (@htdf render)
 (@signature GameState -> Image)
-;; render GameState on MTS
-;; !!!
-(define (render gs) MTS)
+;; render points on game render
+;; !!! HOLY SHIT THERES SO MUCH IN RENDER
+;(define (render gs) MTS)
 
+(@template-origin GameState)
+(@template
+ (define (render gs)
+   (... (fn-for-flappy (gs-flappy gs))
+        (fn-for-lop (gs-lop gs))
+        (gs-points gs)
+        (gs-state gs))))
+
+(define (render gs)
+  (place-image (text (gs-points gs) FONT-SIZE TEXT-COLOR)
+               POINTS-X
+               POINTS-Y
+               (render-game gs)))
+
+(@htdf render-game)
+(@signature GameState -> Image)
+;; render game (bird and pipe) on MTS with pipes
+;; !!! HOLY SHIT THERES SO MUCH IN RENDER
+;(define (render-game gs) MTS)
+
+(@template-origin GameState)
+(@template
+ (define (render-game gs)
+   (... (fn-for-flappy (gs-flappy gs))
+        (fn-for-lop (gs-lop gs))
+        (gs-points gs)
+        (gs-state gs))))
+
+(define (render-game gs)
+  (place-image (rotate (flappy-r (gs-flappy gs)) FLAPPY-IMG)
+               FLAPPY-X-POS
+               (flappy-y (gs-flappy gs))
+               (render-pipes (gs-lop))))
+
+
+(@htdf render-pipes)
+(@signature ListOfPipes -> Image)
+;; render pipes on mts
+
+;(define (render-pipes lop) MTS)
+
+(@template-origin ListOfPipes)
+(@template
+ (define (render-pipes lop)
+   (cond [(empty? lop) (...)]
+         [else
+          (... (fn-for-pipe (first lop))
+               (render-pipes (rest lop)))])))
+
+(define (render-pipes lop)
+  (cond [(empty? lop) MTS]
+        [else
+         (render-pipe (first lop)
+                      (render-pipes (rest lop)))]))
+
+(@htdf render-pipe)
+(@signature Pipe Image -> Image)
+;; render pipe on a given image
+
+;(define (render-pipe p img) MTS)
+
+(@template-origin Pipe)
+(@template
+ (define (render-pipe p img)
+   (... (pipe-x p)
+        (pipe-y p)
+        img)))
+
+(define (render-pipe p img)
+  (place-image (generate-pipe p)
+               (pipe-x p)
+               (pipe-y p)
+               img))
+
+(@htdf generate-pipe)
+(@signature Pipe -> Image)
+;; generate image of pipe
+
+(check-expect (generate-pipe (make-pipe 0 (/ HEIGHT 2)))
+              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (/ HEIGHT 2))
+                                "solid" PIPE-COLOR)
+                     (rectangle PIPE-WIDTH PIPE-V-GAP
+                                "outline" (make-color 0 0 0 0))
+                     (rectangle PIPE-WIDTH (/ HEIGHT 2)
+                                "solid" PIPE-COLOR)))
+(check-expect (generate-pipe (make-pipe (/ WIDTH 2) (/ HEIGHT 3)))
+              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (/ HEIGHT 3))
+                                "solid" PIPE-COLOR)
+                     (rectangle PIPE-WIDTH PIPE-V-GAP
+                                "outline" (make-color 0 0 0 0))
+                     (rectangle PIPE-WIDTH (/ HEIGHT 3)
+                                "solid" PIPE-COLOR)))
+
+;(define (generate-pipe p) empty-image)
+
+(@template-origin Pipe)
+(@template
+ (define (generate-pipe p)
+   (... (pipe-x p)
+        (pipe-y p)
+        img)))
+;; the pipe-y coordinate gives the top left corner of the bottom pipe
+(define (generate-pipe p)
+  (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y p))
+                    "solid" PIPE-COLOR)
+         (rectangle PIPE-WIDTH PIPE-V-GAP "outline" (make-color 0 0 0 0))
+         (rectangle PIPE-WIDTH (pipe-y p)
+                    "solid" PIPE-COLOR)))
 
 (@htdf tock)
 (@signature GameState -> GameState)
