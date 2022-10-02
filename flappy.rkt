@@ -32,8 +32,8 @@
 (define GRAVITY 2)
 (define MAX-ANGLE 30)
 (define MIN-ANGLE -90)
-(define POINTS-X (/ width 2)) ; x position of where points show up
-(define POINTS-Y (/ height 5)) ; y position of where points show up
+(define POINTS-X (/ WIDTH 2)) ; x position of where points show up
+(define POINTS-Y (/ HEIGHT 5)) ; y position of where points show up
 (define TEXT-COLOR "white")
 (define FONT-SIZE 20)
 
@@ -170,16 +170,16 @@
   (place-image (rotate (flappy-r (gs-flappy gs)) FLAPPY-IMG)
                FLAPPY-X-POS
                (flappy-y (gs-flappy gs))
-               (render-pipes (gs-lop))))
+               (render-pipes (gs-lop gs))))
 
 
 (@htdf render-pipes)
-(@signature ListOfPipes -> Image)
+(@signature ListOfPipe -> Image)
 ;; render pipes on mts
 
 ;(define (render-pipes lop) MTS)
 
-(@template-origin ListOfPipes)
+(@template-origin ListOfPipe)
 (@template
  (define (render-pipes lop)
    (cond [(empty? lop) (...)]
@@ -246,6 +246,8 @@
          (rectangle PIPE-WIDTH PIPE-V-GAP "outline" (make-color 0 0 0 0))
          (rectangle PIPE-WIDTH (pipe-y p)
                     "solid" PIPE-COLOR)))
+
+(generate-pipe (make-pipe (/ WIDTH 2) (/ HEIGHT 3)))
 
 (@htdf tock)
 (@signature GameState -> GameState)
