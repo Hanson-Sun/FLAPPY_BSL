@@ -380,6 +380,16 @@
 ;; !!!
 (define (tock-pipes lop) lop)
 
+(@template-origin ListOfPipe)
+(@template
+ (define (tock-pipes lop)
+   (cond [(empty? lop) (...)]
+         [else
+          (... (fn-for-pipe (first lop))
+               (tock-pipes (rest lop)))])))
+
+
+
 (@htdf touch-pipe?)
 (@signature Flappy ListOfPipe -> Boolean)
 ;; end the game if Flappy is overlapping a pipe
@@ -475,4 +485,4 @@
 
 ;(render-pipe P1 MTS)
 ;(render-game GS1)
-(render GS-END)
+;(render GS-END)
