@@ -23,14 +23,14 @@
 (define MAX-Y-SPEED 10)
 (define MTS (get-sprite "yellowbird-midflap"))
 (define WIDTH (image-width MTS))
-(define HEIGHT(image-height MTS))
+(define HEIGHT (image-height MTS))
 (define X-SPEED 5)
 (define PIPE-WIDTH (/ WIDTH 5))
 (define PIPE-V-GAP (/ HEIGHT 10))
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
-(define ACCELERATION 2)
-(define ANGLE-UP 45)
-(define ANGLE-DOWN -45)
+(define GRAVITY 2)
+(define MAX-ANGLE 30)
+(define MIN-ANGLE -90)
 
 
 ;; DATA DEFINITIONS ============================================================
@@ -41,7 +41,8 @@
 ;; interp. y  - the vertical position of Flappy in px
 ;;         dy - the vertical velocity of Flappy in px/tick
 ;;         r  - the rotation of Flappy in degrees
-;; CONSTRAINT: r in [-45, 45]
+;; CONSTRAINT: dy - in [(- MAX-Y-SPEED), MAX-Y-SPEED]
+;;             r  - in [MIN-ANGLE, MAX-ANGLE]
 
 (@dd-template-rules compound) ;3 fields
 
@@ -168,8 +169,29 @@
 (@htdf tock-flappy)
 (@signature Flappy -> Flappy)
 ;; produce the next Flappy
-;; !!!
-(define (tock-flappy f) f)
+
+;; !!! check expects go here
+;(define (tock-flappy f) f)
+
+(@template-origin Flappy)
+
+(@template
+ (define (tock-flappy f)
+   (... (flappy-y f)
+        (flappy-dy f)
+        (flappy-r f))))
+
+(define (tock-flappy f)
+  (make-flappy (+ (flappy-y f) (flappy-dy f))
+               (cond [(> (+ (flappy-dy f) GRAVITY) MAX-Y-SPEED)
+                      MAX-Y-SPEED]
+                     [else (+ (flappy-dy f) GRAVITY)])
+               (cond [(> (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED)) MAX-ANGLE)
+                      MAX-ANGLE]
+                     [(< (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED)) MIN-ANGLE)
+                      MIN-ANGLE]
+                     [else (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED))])))
+
 
 (@htdf tock-pipes)
 (@signature ListOfPipe -> ListOfPipe)
@@ -188,16 +210,7 @@
 (@signature GameState Integer Integer MouseEvent -> GameState)
 ;; accelerate Flappy upwards on "button-down"
 
-;; !!! make this cleaner
-(define LOP10 (cons (make-pipe 200 300) (cons (make-pipe 300 400) empty)))
-(define FP10 (make-flappy 300 -4 0))
-(define FP11 (make-flappy 200 -10 ANGLE-DOWN))
-
-(check-expect (handle-mouse (make-gs FP10 LOP10  500 true) 0 0 "button-down")
-              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
-(check-expect (handle-mouse (make-gs FP11 LOP10  500 true) WIDTH HEIGHT "drag")
-              (make-gs FP11 LOP10 500 true))
-
+;; !!! check expects go here
 ;(define (handle-mouse gs x y me) gs)
 
 (@template-origin MouseEvent)
@@ -219,14 +232,7 @@
 (@signature GameState KeyEvent -> GameState)
 ;; accelerate Flappy upwards on " " and "up"
 
-;; !!! make this cleaner
-(check-expect (handle-key (make-gs FP10 LOP10  500 true) "up")
-              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
-(check-expect (handle-key (make-gs FP11 LOP10  500 true) " ")
-              (make-gs (make-flappy 200 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
-(check-expect (handle-key (make-gs FP11 LOP10  500 true) "a")
-              (make-gs FP11 LOP10 500 true))
-
+;; !!! check expects go here
 ;(define (handle-key gs ke) gs)
 
 (@template-origin KeyEvent)
@@ -282,5 +288,5 @@
         (flappy-r f))))
 
 (define (flap f)
-  (make-flappy (flappy-y f) MAX-Y-SPEED ANGLE-UP))
+  (make-flappy (flappy-y f) (- MAX-Y-SPEED) (flappy-r f)))
 

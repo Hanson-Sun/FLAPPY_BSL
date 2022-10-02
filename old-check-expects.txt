@@ -1,0 +1,15 @@
+(define LOP10 (cons (make-pipe 200 300) (cons (make-pipe 300 400) empty)))
+(define FP10 (make-flappy 300 -4 0))
+(define FP11 (make-flappy 200 -10 ANGLE-DOWN))
+
+(check-expect (handle-mouse (make-gs FP10 LOP10  500 true) 0 0 "button-down")
+              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
+(check-expect (handle-mouse (make-gs FP11 LOP10  500 true) WIDTH HEIGHT "drag")
+              (make-gs FP11 LOP10 500 true))
+
+(check-expect (handle-key (make-gs FP10 LOP10  500 true) "up")
+              (make-gs (make-flappy 300 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
+(check-expect (handle-key (make-gs FP11 LOP10  500 true) " ")
+              (make-gs (make-flappy 200 MAX-Y-SPEED ANGLE-UP) LOP10 500 true))
+(check-expect (handle-key (make-gs FP11 LOP10  500 true) "a")
+              (make-gs FP11 LOP10 500 true))
