@@ -14,19 +14,22 @@
 ;; CONSTANTS ===================================================================
 
 (define (get-sprite s)
-  (bitmap/url (string-append "https://raw.githubusercontent.com/samuelcust/
-                             flappy-bird-assets/master/sprites/" s ".png")))
+  (bitmap/url
+   (string-append
+    "https://raw.githubusercontent.com/Hanson-Sun/FLAPPY_BSL/main/sprites/"
+    s
+    ".png")))
 
 (define FLAPPY-IMG (get-sprite "yellowbird-midflap"))
 (define FLAPPY-LEN (image-height FLAPPY-IMG))
 (define FLAPPY-X-POS 50)
 (define MAX-Y-SPEED 10)
-(define MTS (get-sprite "yellowbird-midflap"))
+(define MTS (get-sprite "background-day"))
 (define WIDTH (image-width MTS))
 (define HEIGHT (image-height MTS))
 (define X-SPEED 5)
-(define PIPE-WIDTH (/ WIDTH 5))
-(define PIPE-V-GAP (/ HEIGHT 10))
+(define PIPE-WIDTH (/ WIDTH 5.5))
+(define PIPE-V-GAP (* FLAPPY-LEN 4.5))
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
 (define GRAVITY 2)
@@ -47,6 +50,9 @@
 ;;         dy - the vertical velocity of Flappy in px/tick
 ;;         r  - the rotation of Flappy in degrees
 
+(define F1 (make-flappy (/ HEIGHT 2) 5 45))
+(define F2 (make-flappy (/ HEIGHT 2.5) -2 -45))
+
 (@dd-template-rules compound) ;3 fields
 
 (define (fn-for-flappy f)
@@ -60,18 +66,23 @@
 ;; Pipe is (make-pipe Number Number)
 ;; interp. x, y - the position of the top left corner of the bottom pipe in px
 
+(define P1 (make-pipe 0 (/ HEIGHT 2)))
+(define P2 (make-pipe (/ WIDTH 2) (/ HEIGHT 3)))
+
 (@dd-template-rules compound) ;2 fields
 
 (define (fn-for-pipe p)
   (... (pipe-x p)
        (pipe-y p)))
 
-
 (@htdd ListOfPipe)
 ;; ListOfPipe is one of:
 ;; - empty
 ;; - (cons Pipe ListOfPipe)
 ;; interp. a list of pipe obstacles
+
+(define LOP1 empty)
+(define LOP2 (cons P1 (cons P2 empty)))
 
 (@dd-template-rules one-of
                     atomic-distinct
@@ -94,7 +105,9 @@
 ;;         points - the number of pipes passed
 ;;         state  - true if game is in progress
 
-(define START (make-gs (make-flappy 0 0 0) empty 0 true))
+(define START (make-gs (make-flappy (/ HEIGHT 2) 0 0) empty 0 true))
+(define GS1 (make-gs F2 LOP2 10 true))
+(define GS-END (make-gs F2 LOP2 20 false))
 
 (@dd-template-rules compound
                     ref
@@ -135,7 +148,30 @@
 (@htdf render)
 (@signature GameState -> Image)
 ;; render points on game render
-;; !!! HOLY SHIT THERES SO MUCH IN RENDER
+
+(check-expect (render START)
+              (place-image (text (number->string (gs-points START))
+                                 FONT-SIZE TEXT-COLOR)
+                           POINTS-X
+                           POINTS-Y
+                           (render-game START)))
+
+(check-expect (render GS1)
+              (place-image (text (number->string (gs-points GS1))
+                                 FONT-SIZE TEXT-COLOR)
+                           POINTS-X
+                           POINTS-Y
+                           (render-game GS1)))
+
+(check-expect (render GS-END)
+              (place-image
+               (above (text (number->string (gs-points GS-END))
+                            (* 2 FONT-SIZE) TEXT-COLOR)
+                      (text "GAME OVER" (* 2 FONT-SIZE) TEXT-COLOR))
+               POINTS-X
+               POINTS-Y
+               (render-game GS-END)))
+
 ;(define (render gs) MTS)
 
 (@template-origin GameState)
@@ -147,15 +183,34 @@
         (gs-state gs))))
 
 (define (render gs)
-  (place-image (text (gs-points gs) FONT-SIZE TEXT-COLOR)
-               POINTS-X
-               POINTS-Y
-               (render-game gs)))
+  (if (gs-state gs)
+      (place-image (text (number->string (gs-points gs)) FONT-SIZE TEXT-COLOR)
+                   POINTS-X
+                   POINTS-Y
+                   (render-game gs))
+      (place-image (above (text (number->string (gs-points gs))
+                                (* 2 FONT-SIZE) TEXT-COLOR)
+                          (text "GAME OVER" (* 2 FONT-SIZE) TEXT-COLOR))
+                   POINTS-X
+                   POINTS-Y
+                   (render-game gs))))
 
 (@htdf render-game)
 (@signature GameState -> Image)
 ;; render game (bird and pipe) on MTS with pipes
-;; !!! HOLY SHIT THERES SO MUCH IN RENDER
+(check-expect (render-game START)
+              (place-image (rotate (flappy-r (gs-flappy START)) FLAPPY-IMG)
+                           FLAPPY-X-POS
+                           (flappy-y (gs-flappy START))
+                           (render-pipes (gs-lop START))))
+
+(check-expect (render-game GS1)
+              (place-image (rotate (flappy-r (gs-flappy GS1)) FLAPPY-IMG)
+                           FLAPPY-X-POS
+                           (flappy-y (gs-flappy GS1))
+                           (render-pipes (gs-lop GS1))))
+
+
 ;(define (render-game gs) MTS)
 
 (@template-origin GameState)
@@ -177,6 +232,8 @@
 (@signature ListOfPipe -> Image)
 ;; render pipes on mts
 
+(check-expect (render-pipes LOP1) MTS)
+
 ;(define (render-pipes lop) MTS)
 
 (@template-origin ListOfPipe)
@@ -197,6 +254,20 @@
 (@signature Pipe Image -> Image)
 ;; render pipe on a given image
 
+(check-expect (render-pipe P1 MTS)
+              (place-image (generate-pipe-img P1)
+                           (+ (pipe-x P1)(/ PIPE-WIDTH 2)) (/ HEIGHT 2) MTS))
+
+(check-expect (render-pipe P2
+                           (place-image (generate-pipe-img P1)
+                                        (+ (pipe-x P1)(/ PIPE-WIDTH 2))
+                                        (pipe-y P1) MTS))
+              (place-image (generate-pipe-img P2)
+                           (+ (pipe-x P2)(/ PIPE-WIDTH 2)) (/ HEIGHT 2)
+                           (place-image (generate-pipe-img P1)
+                                        (+ (pipe-x P1)(/ PIPE-WIDTH 2))
+                                        (/ HEIGHT 2) MTS)))
+
 ;(define (render-pipe p img) MTS)
 
 (@template-origin Pipe)
@@ -207,47 +278,46 @@
         img)))
 
 (define (render-pipe p img)
-  (place-image (generate-pipe p)
-               (pipe-x p)
-               (pipe-y p)
+  (place-image (generate-pipe-img p)
+               (+ (pipe-x p) (/ PIPE-WIDTH 2))
+               (/ HEIGHT 2)
                img))
 
-(@htdf generate-pipe)
+(@htdf generate-pipe-img)
 (@signature Pipe -> Image)
 ;; generate image of pipe
 
-(check-expect (generate-pipe (make-pipe 0 (/ HEIGHT 2)))
-              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (/ HEIGHT 2))
+(check-expect (generate-pipe-img P1)
+              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y P1))
                                 "solid" PIPE-COLOR)
                      (rectangle PIPE-WIDTH PIPE-V-GAP
                                 "outline" (make-color 0 0 0 0))
-                     (rectangle PIPE-WIDTH (/ HEIGHT 2)
+                     (rectangle PIPE-WIDTH (pipe-y P1)
                                 "solid" PIPE-COLOR)))
-(check-expect (generate-pipe (make-pipe (/ WIDTH 2) (/ HEIGHT 3)))
-              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (/ HEIGHT 3))
+(check-expect (generate-pipe-img P2)
+              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y P2))
                                 "solid" PIPE-COLOR)
                      (rectangle PIPE-WIDTH PIPE-V-GAP
                                 "outline" (make-color 0 0 0 0))
-                     (rectangle PIPE-WIDTH (/ HEIGHT 3)
+                     (rectangle PIPE-WIDTH (pipe-y P2)
                                 "solid" PIPE-COLOR)))
 
-;(define (generate-pipe p) empty-image)
+;(define (generate-pipe-img p) empty-image)
 
 (@template-origin Pipe)
 (@template
- (define (generate-pipe p)
+ (define (generate-pipe-img p)
    (... (pipe-x p)
         (pipe-y p)
         img)))
 ;; the pipe-y coordinate gives the top left corner of the bottom pipe
-(define (generate-pipe p)
+(define (generate-pipe-img p)
   (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y p))
                     "solid" PIPE-COLOR)
          (rectangle PIPE-WIDTH PIPE-V-GAP "outline" (make-color 0 0 0 0))
          (rectangle PIPE-WIDTH (pipe-y p)
                     "solid" PIPE-COLOR)))
 
-(generate-pipe (make-pipe (/ WIDTH 2) (/ HEIGHT 3)))
 
 (@htdf tock)
 (@signature GameState -> GameState)
@@ -401,3 +471,8 @@
 (define (flap f)
   (make-flappy (flappy-y f) (- MAX-Y-SPEED) (flappy-r f)))
 
+;; RANDOM TESTING CORNER ===============================
+
+;(render-pipe P1 MTS)
+;(render-game GS1)
+(render GS-END)
