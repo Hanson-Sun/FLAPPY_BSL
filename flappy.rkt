@@ -32,9 +32,9 @@
 (define PIPE-V-GAP (* FLAPPY-LEN 4.5))
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
-(define GRAVITY 2)
+(define GRAVITY 1.2)
 (define MAX-ANGLE 30)
-(define MIN-ANGLE -90)
+(define MIN-ANGLE -90) ;Flappy should be 180 degrees facing straight towards the ground at negative velocity, but the render rotation needs to be fixed first before this is adressed
 (define POINTS-X (/ WIDTH 2)) ; x position of where points show up
 (define POINTS-Y (/ HEIGHT 5)) ; y position of where points show up
 (define TEXT-COLOR "white")
