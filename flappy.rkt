@@ -22,6 +22,7 @@
 
 (define FLAPPY-IMG (get-sprite "yellowbird-midflap"))
 (define FLAPPY-LEN (image-height FLAPPY-IMG))
+(define FLAPPY-HFLEN (/ FLAPPY-LEN 2))
 (define FLAPPY-X-POS 50)
 (define MAX-Y-SPEED 10)
 (define MTS (get-sprite "background-day"))
@@ -33,8 +34,8 @@
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
 (define GRAVITY 2)
-(define MAX-ANGLE 30)
-(define MIN-ANGLE -90)
+(define MAX-ANGLE -30)
+(define MIN-ANGLE 90)
 (define POINTS-X (/ WIDTH 2)) ; x position of where points show up
 (define POINTS-Y (/ HEIGHT 5)) ; y position of where points show up
 (define TEXT-COLOR "white")
@@ -390,11 +391,109 @@
 
 
 
-(@htdf touch-pipe?)
+(@htdf touch-pipes?)
 (@signature Flappy ListOfPipe -> Boolean)
-;; end the game if Flappy is overlapping a pipe
+;; end the game if Flappy is overlapping any pipe in lop
 ;; !!!
-(define (touch-pipe? f lop) false)
+(define (touch-pipes? f lop) false)
+
+(@template-origin ListOfPipe
+                  Flappy)
+(@template
+ (define (touch-pipes? f lop)
+   (cond [(empty? lop) (...)]
+         [else
+          (... (fn-for-pipe (first lop))
+               (touch-pipes? (rest lop))
+               (fn-for-flappy f))])))
+#;
+(define (touch-pipes? f lop)
+  (cond [(empty? lop) false]
+        [else
+         (if (pipe-in-range? (first lop))
+             (touch-pipe? f (first lop))
+             (touch-pipes? f (rest lop)))]))
+
+(@htdf pipe-in-range?)
+(@signature Pipe -> Boolean)
+;; check if pipe is in range of flappy (x-values)
+
+(check-expect (pipe-in-range? (make-pipe (+ FLAPPY-X-POS FLAPPY-HFLEN)
+                                         (/ HEIGHT 2)))
+              true)
+(check-expect (pipe-in-range? (make-pipe (+ FLAPPY-X-POS FLAPPY-HFLEN 1)
+                                         (/ HEIGHT 2)))
+              false)
+(check-expect (pipe-in-range? (make-pipe (+ FLAPPY-X-POS FLAPPY-HFLEN -1)
+                                         (/ HEIGHT 2)))
+              true)
+
+(check-expect (pipe-in-range?
+               (make-pipe (- FLAPPY-X-POS PIPE-WIDTH (* 1 FLAPPY-HFLEN))
+                                         (/ HEIGHT 2)))
+              true)
+(check-expect (pipe-in-range?
+               (make-pipe (- FLAPPY-X-POS PIPE-WIDTH (* 1 FLAPPY-HFLEN) 1)
+                                         (/ HEIGHT 2)))
+              false)
+(check-expect (pipe-in-range?
+               (make-pipe (- FLAPPY-X-POS PIPE-WIDTH (* 1 FLAPPY-HFLEN) -1)
+                                         (/ HEIGHT 2)))
+              true)
+;(define (pipe-in-range? f p) true)
+
+(@template-origin Pipe)
+(@template
+ (define (pipe-in-range? p)
+   (... p)))
+
+(define (pipe-in-range? p)
+  (or (and (>= (+ FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
+       (<= (+ FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))
+      (and (>= (- FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
+       (<= (- FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))))
+
+(@htdf touch-pipe?)
+(@signature Flappy Pipe -> Boolean)
+;; check if flappy is in contact with a single pipe (y-values)
+
+(check-expect (touch-pipe? (make-flappy 60 0 0)
+                           (make-pipe (+ FLAPPY-X-POS 1)
+                                      (+ 60 FLAPPY-HFLEN)))
+              true)
+(check-expect (touch-pipe? (make-flappy 60 0 0)
+                           (make-pipe (+ FLAPPY-X-POS 1)
+                                      (+ 60 FLAPPY-HFLEN 1)))
+              false)
+(check-expect (touch-pipe? (make-flappy 60 0 0)
+                           (make-pipe (+ FLAPPY-X-POS 1)
+                                      (+ 60 FLAPPY-HFLEN -1)))
+              true)
+
+(check-expect (touch-pipe? (make-flappy (- 60 PIPE-V-GAP (- FLAPPY-HFLEN)) 0 0)
+                           (make-pipe (+ FLAPPY-X-POS 1)
+                                      60))
+              true)
+
+(check-expect (touch-pipe? (make-flappy (- 60 PIPE-V-GAP(- FLAPPY-HFLEN) -1)0 0)
+                           (make-pipe (+ FLAPPY-X-POS 1)
+                                      60))
+              false)
+
+(check-expect (touch-pipe? (make-flappy (- 60 PIPE-V-GAP (- FLAPPY-HFLEN) 1)0 0)
+                           (make-pipe (+ FLAPPY-X-POS 1)
+                                      60))
+              true)
+;(define (pipe-in-range? f p) true)
+
+(@template-origin Flappy Pipe)
+(@template
+ (define (touch-pipe? f p)
+   (... f p)))
+
+(define (touch-pipe? f p)
+  (or (>= (+ (flappy-y f) FLAPPY-HFLEN) (pipe-y p))
+      (<= (- (flappy-y f) FLAPPY-HFLEN) (- (pipe-y p) PIPE-V-GAP))))
 
 
 (@htdf handle-mouse)
