@@ -33,7 +33,7 @@
 (define PIPE-V-GAP (* FLAPPY-LEN 4.5))
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
-(define GRAVITY 1.2)
+(define GRAVITY 0.6)
 (define MAX-ANGLE -20)
 (define MIN-ANGLE 90)
 (define POINTS-X (/ WIDTH 2)) ; x position of where points show up
