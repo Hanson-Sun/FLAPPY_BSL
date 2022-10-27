@@ -346,6 +346,11 @@
                   (gs-lop gs)
                   (gs-points gs)
                   false)]
+        [(touch-ground? (gs-flappy gs))
+         (make-gs (tock-flappy (gs-flappy gs))
+                  (gs-lop gs)
+                  (gs-points gs)
+                  false)]
         [else
          (make-gs (tock-flappy (gs-flappy gs))
                   (tock-pipes (gs-lop gs))
@@ -501,6 +506,18 @@
   (or (>= (+ (flappy-y f) FLAPPY-HFLEN) (pipe-y p))
       (<= (- (flappy-y f) FLAPPY-HFLEN) (- (pipe-y p) PIPE-V-GAP))))
 
+(@htdf touch-ground?)
+(@signature Flappy -> Flappy)
+;make the gamestate false when flappy touches the ground
+(check-expect (touch-ground? (make-flappy 204.8 -2 -45)) false)
+(check-expect (touch-ground? (make-flappy HEIGHT 3 45)) true)
+(check-expect (touch-ground? (make-flappy (+ HEIGHT 1) 2 34)) true)
+(check-expect (touch-ground? (make-flappy (- HEIGHT 1) 2 34)) false)
+
+(define (touch-ground? f)
+  (>= (flappy-y f) HEIGHT))
+      
+             
 
 (@htdf handle-mouse)
 (@signature GameState Integer Integer MouseEvent -> GameState)
