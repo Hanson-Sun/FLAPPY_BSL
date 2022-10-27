@@ -34,12 +34,14 @@
 (define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
 (define GRAVITY 1.2)
-(define MAX-ANGLE 30)
-(define MIN-ANGLE -90)
+(define MAX-ANGLE -20)
+(define MIN-ANGLE 90)
 (define POINTS-X (/ WIDTH 2)) ; x position of where points show up
 (define POINTS-Y (/ HEIGHT 5)) ; y position of where points show up
 (define TEXT-COLOR "white")
 (define FONT-SIZE 20)
+(define MIN-Y-SPEED 10)
+(define ROTATE-SPEED 5) 
 
 
 ;; DATA DEFINITIONS ============================================================
@@ -69,6 +71,7 @@
 
 (define P1 (make-pipe 0 (/ HEIGHT 2)))
 (define P2 (make-pipe (/ WIDTH 2) (/ HEIGHT 3)))
+(define P3 (make-pipe WIDTH (/ HEIGHT 2)))
 
 (@dd-template-rules compound) ;2 fields
 
@@ -83,7 +86,7 @@
 ;; interp. a list of pipe obstacles
 
 (define LOP1 empty)
-(define LOP2 (cons P1 (cons P2 empty)))
+(define LOP2 (cons P2 (cons P3 empty)))
 
 (@dd-template-rules one-of
                     atomic-distinct
@@ -106,7 +109,7 @@
 ;;         points - the number of pipes passed
 ;;         state  - true if game is in progress
 
-(define START (make-gs (make-flappy (/ HEIGHT 2) 0 0) empty 0 true))
+(define START (make-gs (make-flappy (/ HEIGHT 2) 0 0) LOP2 0 true))
 (define GS1 (make-gs F2 LOP2 10 true))
 (define GS-END (make-gs F2 LOP2 20 false))
 
@@ -200,13 +203,13 @@
 (@signature GameState -> Image)
 ;; render game (bird and pipe) on MTS with pipes
 (check-expect (render-game START)
-              (place-image (rotate (flappy-r (gs-flappy START)) FLAPPY-IMG)
+              (place-image (rotate (- (flappy-r (gs-flappy START))) FLAPPY-IMG)
                            FLAPPY-X-POS
                            (flappy-y (gs-flappy START))
                            (render-pipes (gs-lop START))))
 
 (check-expect (render-game GS1)
-              (place-image (rotate (flappy-r (gs-flappy GS1)) FLAPPY-IMG)
+              (place-image (rotate (- (flappy-r (gs-flappy GS1))) FLAPPY-IMG)
                            FLAPPY-X-POS
                            (flappy-y (gs-flappy GS1))
                            (render-pipes (gs-lop GS1))))
@@ -223,7 +226,7 @@
         (gs-state gs))))
 
 (define (render-game gs)
-  (place-image (rotate (flappy-r (gs-flappy gs)) FLAPPY-IMG)
+  (place-image (rotate (- (flappy-r (gs-flappy gs))) FLAPPY-IMG)
                FLAPPY-X-POS
                (flappy-y (gs-flappy gs))
                (render-pipes (gs-lop gs))))
@@ -338,7 +341,7 @@
 
 (define (tock gs)
   (cond [(false? (gs-state gs)) gs]
-        [(touch-pipe? (gs-flappy gs) (gs-lop gs))
+        [(touch-pipes? (gs-flappy gs) (gs-lop gs))
          (make-gs (tock-flappy (gs-flappy gs))
                   (gs-lop gs)
                   (gs-points gs)
@@ -368,11 +371,14 @@
 (define (tock-flappy f)
   (make-flappy (+ (flappy-y f) (flappy-dy f))
                (+ (flappy-dy f) GRAVITY)
-               (cond [(> (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED)) MAX-ANGLE)
-                      MAX-ANGLE]
-                     [(< (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED)) MIN-ANGLE)
-                      MIN-ANGLE]
-                     [else (* (flappy-dy f) (/ MAX-ANGLE MAX-Y-SPEED))])))
+               (cond
+                 [(> (* (flappy-dy f) (/ MIN-ANGLE MIN-Y-SPEED)) 180) ;angle of 180 degrees is equivalent to rotate 90
+                  MIN-ANGLE]
+                 [(< (* (flappy-dy f) (/ (- MAX-ANGLE) MAX-Y-SPEED)) -10) ;-10 is resistance to change, idk if this should be a constant
+                  MAX-ANGLE]
+                 [else (* (flappy-dy f) ROTATE-SPEED)])))
+ ;this whole thing had to be debugged, why?
+ ;because when flappy falls downwards, his speed is positive, not negative.
 
 
 (@htdf tock-pipes)
@@ -395,7 +401,7 @@
 (@signature Flappy ListOfPipe -> Boolean)
 ;; end the game if Flappy is overlapping any pipe in lop
 ;; !!!
-(define (touch-pipes? f lop) false)
+;(define (touch-pipes? f lop) false)
 
 (@template-origin ListOfPipe
                   Flappy)
@@ -406,7 +412,7 @@
           (... (fn-for-pipe (first lop))
                (touch-pipes? (rest lop))
                (fn-for-flappy f))])))
-#;
+
 (define (touch-pipes? f lop)
   (cond [(empty? lop) false]
         [else
@@ -430,15 +436,15 @@
 
 (check-expect (pipe-in-range?
                (make-pipe (- FLAPPY-X-POS PIPE-WIDTH (* 1 FLAPPY-HFLEN))
-                                         (/ HEIGHT 2)))
+                          (/ HEIGHT 2)))
               true)
 (check-expect (pipe-in-range?
                (make-pipe (- FLAPPY-X-POS PIPE-WIDTH (* 1 FLAPPY-HFLEN) 1)
-                                         (/ HEIGHT 2)))
+                          (/ HEIGHT 2)))
               false)
 (check-expect (pipe-in-range?
                (make-pipe (- FLAPPY-X-POS PIPE-WIDTH (* 1 FLAPPY-HFLEN) -1)
-                                         (/ HEIGHT 2)))
+                          (/ HEIGHT 2)))
               true)
 ;(define (pipe-in-range? f p) true)
 
@@ -449,9 +455,9 @@
 
 (define (pipe-in-range? p)
   (or (and (>= (+ FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
-       (<= (+ FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))
+           (<= (+ FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))
       (and (>= (- FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
-       (<= (- FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))))
+           (<= (- FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))))
 
 (@htdf touch-pipe?)
 (@signature Flappy Pipe -> Boolean)
