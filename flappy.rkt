@@ -378,9 +378,11 @@
   (make-flappy (+ (flappy-y f) (flappy-dy f))
                (+ (flappy-dy f) GRAVITY)
                (cond
-                 [(> (* (flappy-dy f) (/ MIN-ANGLE MIN-Y-SPEED)) 180) ;angle of 180 degrees is equivalent to rotate 90
+                 [(> (* (flappy-dy f) (/ MIN-ANGLE MIN-Y-SPEED)) 180)
+                  ;angle of 180 degrees is equivalent to rotate 90
                   MIN-ANGLE]
-                 [(< (* (flappy-dy f) (/ (- MAX-ANGLE) MAX-Y-SPEED)) -10) ;-10 is resistance to change, idk if this should be a constant
+                 [(< (* (flappy-dy f) (/ (- MAX-ANGLE) MAX-Y-SPEED)) -10)
+                  ;-10 is resistance to change, idk if this should be a constant
                   MAX-ANGLE]
                  [else (* (flappy-dy f) ROTATE-SPEED)])))
 ;this whole thing had to be debugged, why?
