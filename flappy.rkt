@@ -603,7 +603,10 @@
 
 (define (handle-key gs ke)
   (cond [(key=? " " ke)
-         (start-flap gs)]
+         (if (false? (gs-state gs))
+             START
+         (start-flap gs))]
+      
         [(key=? "up" ke)
          (start-flap gs)]
         [else gs]))
