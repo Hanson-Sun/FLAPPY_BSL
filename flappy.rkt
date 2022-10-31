@@ -30,10 +30,11 @@
 (define HEIGHT (image-height MTS))
 (define X-SPEED 5)
 (define PIPE-WIDTH (/ WIDTH 5.5))
-(define PIPE-V-GAP (* FLAPPY-LEN 4.5))
-(define PIPE-H-GAP (* 1.2 PIPE-WIDTH))
+(define PIPE-V-GAP (* FLAPPY-LEN 5.5))
+(define PIPE-H-GAP (* 1.5 PIPE-WIDTH))
+(define PIPE-SPEED 3)
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
-(define GRAVITY 0.6)
+(define GRAVITY 0.9)
 (define MAX-ANGLE -20)
 (define MIN-ANGLE 90)
 (define POINTS-X (/ WIDTH 2)) ; x position of where points show up
@@ -292,18 +293,18 @@
 ;; generate image of pipe
 
 (check-expect (generate-pipe-img P1)
-              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y P1))
+              (above (rectangle PIPE-WIDTH (pipe-y P1)
                                 "solid" PIPE-COLOR)
                      (rectangle PIPE-WIDTH PIPE-V-GAP
                                 "outline" (make-color 0 0 0 0))
-                     (rectangle PIPE-WIDTH (pipe-y P1)
+                     (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y P1))
                                 "solid" PIPE-COLOR)))
 (check-expect (generate-pipe-img P2)
-              (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y P2))
+              (above (rectangle PIPE-WIDTH (pipe-y P2)
                                 "solid" PIPE-COLOR)
                      (rectangle PIPE-WIDTH PIPE-V-GAP
                                 "outline" (make-color 0 0 0 0))
-                     (rectangle PIPE-WIDTH (pipe-y P2)
+                     (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y P2))
                                 "solid" PIPE-COLOR)))
 
 ;(define (generate-pipe-img p) empty-image)
@@ -316,10 +317,10 @@
         img)))
 ;; the pipe-y coordinate gives the top left corner of the bottom pipe
 (define (generate-pipe-img p)
-  (above (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y p))
+  (above (rectangle PIPE-WIDTH (pipe-y p)
                     "solid" PIPE-COLOR)
          (rectangle PIPE-WIDTH PIPE-V-GAP "outline" (make-color 0 0 0 0))
-         (rectangle PIPE-WIDTH (pipe-y p)
+         (rectangle PIPE-WIDTH (- HEIGHT PIPE-V-GAP (pipe-y p))
                     "solid" PIPE-COLOR)))
 
 
@@ -353,7 +354,7 @@
                   false)]
         [else
          (make-gs (tock-flappy (gs-flappy gs))
-                  (tock-pipes (gs-lop gs))
+                  (filter-pipe (create-new-pipe (tock-pipes (gs-lop gs))))
                   (gs-points gs)
                   true)]))
 
@@ -382,24 +383,66 @@
                  [(< (* (flappy-dy f) (/ (- MAX-ANGLE) MAX-Y-SPEED)) -10) ;-10 is resistance to change, idk if this should be a constant
                   MAX-ANGLE]
                  [else (* (flappy-dy f) ROTATE-SPEED)])))
- ;this whole thing had to be debugged, why?
- ;because when flappy falls downwards, his speed is positive, not negative.
+;this whole thing had to be debugged, why?
+;because when flappy falls downwards, his speed is positive, not negative.
 
 
 (@htdf tock-pipes)
 (@signature ListOfPipe -> ListOfPipe)
 ;; produce the next ListOfPipes
 ;; !!!
-(define (tock-pipes lop) lop)
+;(define (tock-pipes lop) lop)
 
 (@template-origin ListOfPipe)
 (@template
- (define (tock-pipes lop)
+ (define (tock-pipes lop) 
    (cond [(empty? lop) (...)]
          [else
-          (... (fn-for-pipe (first lop))
+          (... (next-pipe (first lop))
                (tock-pipes (rest lop)))])))
 
+(define (tock-pipes lop)
+  (cond [(empty? lop) empty]
+        [else
+         (cons (next-pipe (first lop))
+               (tock-pipes (rest lop)))]))
+
+(@htdf next-pipe)
+(@signature Pipe -> Pipe)
+;; produce the next pipe state (move pipe left by pipe-speed)
+
+(check-expect (next-pipe (make-pipe 10 50)) (make-pipe (- 10 PIPE-SPEED) 50))
+(check-expect (next-pipe (make-pipe 60 20)) (make-pipe (- 60 PIPE-SPEED) 20))
+
+(define (next-pipe p)
+  (make-pipe (- (pipe-x p) PIPE-SPEED) (pipe-y p)))
+
+(@htdf create-new-pipe)
+(@signature ListOfPipe -> ListOfPipe)
+;; add new pipe if last pipe is far enough
+;; !!!!
+
+(@template-origin ListOfPipe)
+
+(define (create-new-pipe lop)
+  (if (< (+ (pipe-x (first (reverse lop))) PIPE-WIDTH PIPE-H-GAP) WIDTH)
+      (append lop
+              (list (make-pipe WIDTH (abs (- (* 0.7 (random HEIGHT))
+                                             (* 0.1 HEIGHT))))))
+      lop))
+
+(@htdf filter-pipe)
+(@signature ListOfPipe -> Boolean)
+;; check if pipe is out of bound
+;; !!!!!
+(@template-origin Pipe)
+
+(define (filter-pipe lop)
+  (cond [(empty? lop) empty]
+        [else
+         (if (< (pipe-x (first lop)) (- PIPE-WIDTH))
+             (filter-pipe (rest lop))
+             (cons (first lop) (filter-pipe (rest lop))))]))
 
 
 (@htdf touch-pipes?)
@@ -475,7 +518,7 @@
 (check-expect (touch-pipe? (make-flappy 60 0 0)
                            (make-pipe (+ FLAPPY-X-POS 1)
                                       (+ 60 FLAPPY-HFLEN 1)))
-              false)
+              true)
 (check-expect (touch-pipe? (make-flappy 60 0 0)
                            (make-pipe (+ FLAPPY-X-POS 1)
                                       (+ 60 FLAPPY-HFLEN -1)))
@@ -489,7 +532,7 @@
 (check-expect (touch-pipe? (make-flappy (- 60 PIPE-V-GAP(- FLAPPY-HFLEN) -1)0 0)
                            (make-pipe (+ FLAPPY-X-POS 1)
                                       60))
-              false)
+              true)
 
 (check-expect (touch-pipe? (make-flappy (- 60 PIPE-V-GAP (- FLAPPY-HFLEN) 1)0 0)
                            (make-pipe (+ FLAPPY-X-POS 1)
@@ -503,8 +546,8 @@
    (... f p)))
 
 (define (touch-pipe? f p)
-  (or (>= (+ (flappy-y f) FLAPPY-HFLEN) (pipe-y p))
-      (<= (- (flappy-y f) FLAPPY-HFLEN) (- (pipe-y p) PIPE-V-GAP))))
+  (or (<= (- (flappy-y f) FLAPPY-HFLEN) (pipe-y p))
+      (>= (+ (flappy-y f) FLAPPY-HFLEN) (+ (pipe-y p) PIPE-V-GAP))))
 
 (@htdf touch-ground?)
 (@signature Flappy -> Flappy)
@@ -518,7 +561,6 @@
   (>= (flappy-y f) HEIGHT))
       
              
-
 (@htdf handle-mouse)
 (@signature GameState Integer Integer MouseEvent -> GameState)
 ;; accelerate Flappy upwards on "button-down"
