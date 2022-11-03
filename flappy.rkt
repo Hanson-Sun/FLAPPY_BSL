@@ -42,7 +42,8 @@
 (define TEXT-COLOR "white")
 (define FONT-SIZE 20)
 (define MIN-Y-SPEED 10)
-(define ROTATE-SPEED 5) 
+(define ROTATE-SPEED 5)
+(define D-BETWEEN-PIPE (+ PIPE-WIDTH 20))
 
 
 ;; DATA DEFINITIONS ============================================================
@@ -110,7 +111,7 @@
 ;;         points - the number of pipes passed
 ;;         state  - true if game is in progress
 
-(define START (make-gs (make-flappy (/ HEIGHT 2) 0 0) LOP2 0 true))
+(define START (make-gs (make-flappy (/ HEIGHT 2) 0 0) (list P3) 0 true))
 (define GS1 (make-gs F2 LOP2 10 true))
 (define GS-END (make-gs F2 LOP2 20 false))
 
@@ -162,7 +163,7 @@
                            (render-game START)))
 
 (check-expect (render GS1)
-              (place-image (text (number->string (gs-points GS1))
+              (place-image (text (number->string (floor (/ (gs-points GS1) 25)))
                                  FONT-SIZE TEXT-COLOR)
                            POINTS-X
                            POINTS-Y
@@ -170,7 +171,7 @@
 
 (check-expect (render GS-END)
               (place-image
-               (above (text (number->string (gs-points GS-END))
+               (above (text (number->string (floor (/ (gs-points GS-END) 25)))
                             (* 2 FONT-SIZE) TEXT-COLOR)
                       (text "GAME OVER" (* 2 FONT-SIZE) TEXT-COLOR))
                POINTS-X
@@ -189,11 +190,12 @@
 
 (define (render gs)
   (if (gs-state gs)
-      (place-image (text (number->string (gs-points gs)) FONT-SIZE TEXT-COLOR)
+      (place-image (text (number->string (floor (/ (gs-points gs) 25)))
+                         FONT-SIZE TEXT-COLOR)
                    POINTS-X
                    POINTS-Y
                    (render-game gs))
-      (place-image (above (text (number->string (gs-points gs))
+      (place-image (above (text (number->string (floor (/ (gs-points gs) 25)))
                                 (* 2 FONT-SIZE) TEXT-COLOR)
                           (text "GAME OVER" (* 2 FONT-SIZE) TEXT-COLOR))
                    POINTS-X
@@ -342,6 +344,7 @@
 
 (define (tock gs)
   (cond [(false? (gs-state gs)) gs]
+
         [(touch-pipes? (gs-flappy gs) (gs-lop gs))
          (make-gs (tock-flappy (gs-flappy gs))
                   (gs-lop gs)
@@ -352,6 +355,11 @@
                   (gs-lop gs)
                   (gs-points gs)
                   false)]
+        [(past-pipes? (gs-flappy gs) (gs-lop gs))
+         (make-gs (tock-flappy (gs-flappy gs))
+                  (filter-pipe (create-new-pipe (tock-pipes (gs-lop gs))))
+                  (add1 (gs-points gs))
+                  true)]
         [else
          (make-gs (tock-flappy (gs-flappy gs))
                   (filter-pipe (create-new-pipe (tock-pipes (gs-lop gs))))
@@ -427,7 +435,8 @@
 (@template-origin ListOfPipe)
 
 (define (create-new-pipe lop)
-  (if (< (+ (pipe-x (first (reverse lop))) PIPE-WIDTH PIPE-H-GAP) WIDTH)
+  (if (< (+ (pipe-x (first (reverse lop)))  D-BETWEEN-PIPE
+            PIPE-H-GAP) WIDTH)
       (append lop
               (list (make-pipe WIDTH (abs (- (* 0.7 (random HEIGHT))
                                              (* 0.1 HEIGHT))))))
@@ -508,6 +517,46 @@
            (<= (+ FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))
       (and (>= (- FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
            (<= (- FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))))
+
+(@htdf past-pipes?)
+(@signature Flappy ListOfPipe -> Boolean)
+;;produces true if flappy flies past a pipe
+
+(@template-origin ListOfPipe
+                  Flappy)
+(@template
+ (define (past-pipes? f lop)
+   (cond [(empty? lop) (...)]
+         [else
+          (... (fn-for-pipe (first lop))
+               (touch-pipes? (rest lop))
+               (fn-for-flappy f))])))
+
+(define (past-pipes? f lop)
+  (cond [(empty? lop) false]
+        [else
+         (if (pipe-in-range? (first lop))
+             (past-pipe? f (first lop))
+             (past-pipes? f (rest lop)))]))
+
+(@htdf past-pipe?)
+(@signature Flappy Pipe -> Boolean)
+;;produces true if flappy flies past a pipe in range
+
+(@template-origin Flappy Pipe)
+(@template
+ (define (past-pipe? f p)
+   (...(flappy-y f)
+       (flappy-dy f)
+       (flappy-r f)))) 
+
+
+(define (past-pipe? f p)
+  (or (and (>= (+ FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
+           (<= (+ FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))
+      (and (>= (- FLAPPY-X-POS FLAPPY-HFLEN) (pipe-x p))
+           (<= (- FLAPPY-X-POS FLAPPY-HFLEN) (+ (pipe-x p) PIPE-WIDTH)))))
+
 
 (@htdf touch-pipe?)
 (@signature Flappy Pipe -> Boolean)
@@ -605,7 +654,7 @@
   (cond [(key=? " " ke)
          (if (false? (gs-state gs))
              START
-         (start-flap gs))]
+             (start-flap gs))]
       
         [(key=? "up" ke)
          (start-flap gs)]
