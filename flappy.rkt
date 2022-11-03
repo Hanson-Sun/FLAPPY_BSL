@@ -21,29 +21,28 @@
     ".png")))
 
 (define FLAPPY-IMG (get-sprite "yellowbird-midflap"))
-(define FLAPPY-LEN (image-height FLAPPY-IMG))
-(define FLAPPY-HFLEN (/ FLAPPY-LEN 2))
-(define FLAPPY-X-POS 50)
+(define FLAPPY-LEN (image-height FLAPPY-IMG)) ; length of flappy image
+(define FLAPPY-HFLEN (/ FLAPPY-LEN 2)) ; half the length of flappy image
+(define FLAPPY-X-POS 50) ; x position of flappy
 (define MAX-Y-SPEED 10)
+(define MIN-Y-SPEED 10) ; constrain flappy falling speed
 (define MTS (get-sprite "background-day"))
 (define WIDTH (image-width MTS))
-(define HEIGHT (image-height MTS))
-(define X-SPEED 5)
-(define PIPE-WIDTH (/ WIDTH 5.5))
-(define PIPE-V-GAP (* FLAPPY-LEN 5.5))
-(define PIPE-H-GAP (* 1.5 PIPE-WIDTH))
-(define PIPE-SPEED 3)
+(define HEIGHT (image-height MTS)) 
+(define PIPE-WIDTH (/ WIDTH 5.5)) 
+(define PIPE-V-GAP (* FLAPPY-LEN 5.5)) ; vertical gap between pipes
+(define PIPE-H-GAP (* 3.1 PIPE-WIDTH)) ; horizontal gap between pipes
+(define PIPE-SPEED 3) ; speed of pipe
 (define PIPE-COLOR "darkgreen") ;!!! change color lol?
-(define GRAVITY 0.9)
-(define MAX-ANGLE -20)
-(define MIN-ANGLE 90)
+(define GRAVITY 0.9) ; downward acceleration that flappy experiences
+(define MAX-ANGLE -20) ; maximum upward rotation that flappy experiences
+(define MIN-ANGLE 90) ; minimum angle when flappy is falling
 (define POINTS-X (/ WIDTH 2)) ; x position of where points show up
 (define POINTS-Y (/ HEIGHT 5)) ; y position of where points show up
 (define TEXT-COLOR "white")
 (define FONT-SIZE 20)
-(define MIN-Y-SPEED 10)
-(define ROTATE-SPEED 5)
-(define D-BETWEEN-PIPE (+ PIPE-WIDTH 20))
+(define ROTATE-SPEED 5) ; speed of which flappy rotates when falling
+
 
 
 ;; DATA DEFINITIONS ============================================================
@@ -386,15 +385,14 @@
   (make-flappy (+ (flappy-y f) (flappy-dy f))
                (+ (flappy-dy f) GRAVITY)
                (cond
-                 [(> (* (flappy-dy f) (/ MIN-ANGLE MIN-Y-SPEED)) 180)
+                 [(> (* (flappy-dy f) (/ MIN-ANGLE MAX-Y-SPEED)) 180)
                   ;angle of 180 degrees is equivalent to rotate 90
                   MIN-ANGLE]
                  [(< (* (flappy-dy f) (/ (- MAX-ANGLE) MAX-Y-SPEED)) -10)
                   ;-10 is resistance to change, idk if this should be a constant
                   MAX-ANGLE]
                  [else (* (flappy-dy f) ROTATE-SPEED)])))
-;this whole thing had to be debugged, why?
-;because when flappy falls downwards, his speed is positive, not negative.
+;when flappy falls downwards, his speed is positive, not negative.
 
 
 (@htdf tock-pipes)
@@ -435,7 +433,7 @@
 (@template-origin ListOfPipe)
 
 (define (create-new-pipe lop)
-  (if (< (+ (pipe-x (first (reverse lop)))  D-BETWEEN-PIPE
+  (if (< (+ (pipe-x (first (reverse lop))) 
             PIPE-H-GAP) WIDTH)
       (append lop
               (list (make-pipe WIDTH (abs (- (* 0.7 (random HEIGHT))
@@ -521,6 +519,8 @@
 (@htdf past-pipes?)
 (@signature Flappy ListOfPipe -> Boolean)
 ;;produces true if flappy flies past a pipe
+;; !!! check expects here
+
 
 (@template-origin ListOfPipe
                   Flappy)
